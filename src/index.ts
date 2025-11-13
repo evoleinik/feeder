@@ -6,7 +6,7 @@ import { ArticleScraper } from './scraper';
 import { ArticleAnalyzer } from './analyzer';
 import { SlackMessenger } from './slack';
 import DatabaseManager from './database';
-import { Config, DailyDigest, ArticleResult, ArticleLink } from './types';
+import { Config, DailyDigest, ArticleResult, ArticleLink, Analysis } from './types';
 import { createAIProvider, ProviderType } from './providers/factory';
 
 dotenv.config();
@@ -161,12 +161,17 @@ class GoogleAlertsIntelligence {
         article.id = articleId;
 
         // Analyze
-        const analysis = await this.analyzer.analyzeArticle(article);
-        analysis.article_id = articleId;
+        const analysisData = await this.analyzer.analyzeArticle(article);
+        analysisData.article_id = articleId;
 
         // Store analysis
-        const analysisId = this.db.insertAnalysis(analysis);
-        analysis.id = analysisId;
+        const analysisId = this.db.insertAnalysis(analysisData);
+
+        // Create full Analysis object with id
+        const analysis: Analysis = {
+          ...analysisData,
+          id: analysisId
+        };
 
         results.push({ article, analysis });
       }

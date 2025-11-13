@@ -52,8 +52,8 @@ export class EmailFetcher {
             const fetch = imap.fetch(results, { bodies: '' });
 
             fetch.on('message', (msg) => {
-              msg.on('body', (stream) => {
-                simpleParser(stream, (err, parsed) => {
+              msg.on('body', (stream: any) => {
+                simpleParser(stream, (err: any, parsed: any) => {
                   if (err) {
                     console.error('Error parsing email:', err);
                     return;
@@ -91,7 +91,7 @@ export class EmailFetcher {
         });
       });
 
-      imap.once('error', (err) => {
+      imap.once('error', (err: Error) => {
         console.error('IMAP error:', err);
         reject(err);
       });
