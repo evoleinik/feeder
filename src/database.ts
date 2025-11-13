@@ -70,8 +70,9 @@ class DatabaseManager {
   }
 
   insertDailyBrief(brief: any): number {
+    // Use INSERT OR REPLACE to allow updating briefs when more articles are found
     const stmt = this.db.prepare(`
-      INSERT INTO daily_briefs (
+      INSERT OR REPLACE INTO daily_briefs (
         date,
         executive_summary,
         key_developments,
