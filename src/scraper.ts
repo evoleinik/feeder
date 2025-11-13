@@ -5,10 +5,17 @@ export class ArticleScraper {
   async scrapeArticle(link: ArticleLink): Promise<Article | null> {
     let browser;
     try {
-      browser = await puppeteer.launch({
+      const launchOptions: any = {
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
+      };
+
+      // Use system Chromium if specified
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      }
+
+      browser = await puppeteer.launch(launchOptions);
 
       const page = await browser.newPage();
 
