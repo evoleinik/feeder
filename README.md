@@ -8,7 +8,7 @@ Automatically processes Google Alerts emails for "ai commerce" and "agentic comm
 - 🔍 Extracts and scrapes article content
 - 🤖 AI-powered analysis with multiple providers (Claude, OpenAI, Gemini)
 - 💾 SQLite database for historical tracking
-- 📊 Daily Slack digests with sentiment analysis
+- 📊 Daily intelligence briefs with consolidated analysis
 - ⏰ Automated daily runs at 11:01 AM
 - 🔄 Deduplication (skips already-processed articles)
 - 🔌 Pluggable AI providers - easily switch between models
@@ -142,7 +142,7 @@ src/
 ├── email.ts          # IMAP email fetching
 ├── parser.ts         # Extract article links from HTML
 ├── scraper.ts        # Puppeteer article scraping
-├── analyzer.ts       # AI analysis orchestrator
+├── analyzer.ts       # Creates intelligence briefs from articles
 ├── providers/
 │   ├── base.ts       # AI provider interface
 │   ├── claude.ts     # Claude implementation
@@ -162,27 +162,18 @@ db/
 **articles**
 - url, title, source, topic, content, published_date, fetched_date
 
-**analysis**
-- article_id, summary, themes (JSON), sentiment_score, sentiment_reasoning
+**daily_briefs**
+- date, executive_summary, key_developments (JSON), notable_articles (JSON), sentiment_summary, trends, what_to_watch, article_count
 
-## Sentiment Scale
+## Slack Intelligence Brief Format
 
-- **1.0**: Very positive (breakthroughs, major success)
-- **0.5**: Positive (progress, optimism)
-- **0.0**: Neutral (informational)
-- **-0.5**: Negative (challenges, concerns)
-- **-1.0**: Very negative (failures, major problems)
-
-## Slack Message Format
-
-Daily digest includes:
-- Grouped articles by topic (ai commerce, agentic commerce)
-- Article title with link
-- Sentiment score with emoji
-- 2-3 sentence summary
-- Key themes
-- Source
-- Quick stats (total articles, average sentiment)
+Daily intelligence brief includes:
+- **Executive Summary**: 2-3 sentence overview of what's happening today
+- **Key Developments**: 3-5 unique/important developments (similar stories consolidated)
+- **Notable Articles**: Curated articles with why they matter
+- **Sentiment Summary**: Overall mood and reasoning (optimistic/cautious/neutral/hype)
+- **Trends**: Patterns across articles (early hype vs practical implementation)
+- **What to Watch**: Emerging questions and potential next developments
 
 ## Troubleshooting
 
@@ -205,37 +196,173 @@ Daily digest includes:
 - Check webhook hasn't been revoked
 - Test webhook with curl
 
-## Deployment
+## Deployment to Linux Server
 
-### Local Machine (macOS/Linux)
-
-Run as a background service:
+### Prerequisites
 
 ```bash
+# Install Node.js 18+
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install Chromium for Puppeteer
+sudo apt-get install -y chromium-browser fonts-liberation
+
+# Or install required Puppeteer dependencies
+sudo apt-get install -y \
+  libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 \
+  libcups2 libdbus-1-3 libdrm2 libgbm1 libgtk-3-0 libnspr4 \
+  libnss3 libwayland-client0 libxcomposite1 libxdamage1 \
+  libxfixes3 libxkbcommon0 libxrandr2 xdg-utils
+```
+
+### Setup on Server
+
+**1. Clone the repository:**
+```bash
+git clone https://github.com/YOUR_USERNAME/feeder.git
+cd feeder
+```
+
+**2. Install dependencies:**
+```bash
+npm install
+```
+
+**3. Configure environment:**
+```bash
+cp .env.example .env
+nano .env
+# Fill in all your credentials:
+# - IMAP settings (Gmail app password)
+# - AI provider and API key
+# - Slack webhook URL
+```
+
+**4. Build the project:**
+```bash
 npm run build
-nohup node dist/index.js > logs/feeder.log 2>&1 &
 ```
 
-### Docker
-
-```dockerfile
-FROM node:18-alpine
-RUN apk add --no-cache chromium
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --production
-COPY . .
-RUN npm run build
-CMD ["node", "dist/index.js"]
+**5. Test it works:**
+```bash
+npm run dev -- --test
 ```
 
-### Cloud Server
+### Run with PM2 (Recommended)
 
-- Upload to VPS (AWS, DigitalOcean, etc.)
-- Install Node.js 18+
-- Configure `.env`
-- Run with pm2 or systemd
+PM2 is a production process manager that handles restarts, logging, and monitoring.
+
+**Install PM2:**
+```bash
+sudo npm install -g pm2
+```
+
+**Start the application:**
+```bash
+pm2 start dist/index.js --name feeder
+```
+
+**Configure auto-start on reboot:**
+```bash
+pm2 startup
+# Follow the instructions printed
+pm2 save
+```
+
+**Useful PM2 commands:**
+```bash
+pm2 status              # Check status
+pm2 logs feeder         # View logs
+pm2 logs feeder --lines 100  # View last 100 lines
+pm2 restart feeder      # Restart
+pm2 stop feeder         # Stop
+pm2 delete feeder       # Remove from PM2
+pm2 monit               # Monitor resources
+```
+
+**Configure log rotation:**
+```bash
+pm2 install pm2-logrotate
+pm2 set pm2-logrotate:max_size 10M
+pm2 set pm2-logrotate:retain 7
+```
+
+### Alternative: Systemd Service
+
+Create `/etc/systemd/system/feeder.service`:
+
+```ini
+[Unit]
+Description=Google Alerts Intelligence Tool
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/home/YOUR_USERNAME/feeder
+ExecStart=/usr/bin/node /home/YOUR_USERNAME/feeder/dist/index.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable feeder
+sudo systemctl start feeder
+sudo systemctl status feeder
+```
+
+### Monitoring
+
+Check the scheduled runs are working:
+```bash
+# With PM2
+pm2 logs feeder | grep "Intelligence Run"
+
+# Check database for daily briefs
+sqlite3 db/alerts.db "SELECT date, article_count FROM daily_briefs ORDER BY date DESC LIMIT 5"
+```
+
+### Timezone Configuration
+
+Ensure your server is set to the correct timezone for cron scheduling:
+
+```bash
+# Check current timezone
+timedatectl
+
+# Set timezone (example: US Eastern)
+sudo timedatectl set-timezone America/New_York
+
+# Or for UTC
+sudo timedatectl set-timezone UTC
+```
+
+### Troubleshooting
+
+**Puppeteer issues:**
+```bash
+# Set explicit Chrome path in environment
+export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+```
+
+**Permission issues:**
+```bash
+# Ensure db directory is writable
+chmod 755 db
+```
+
+**Check logs:**
+```bash
+pm2 logs feeder --err   # Error logs only
+pm2 logs feeder --lines 200  # More context
+```
 
 ## License
 

@@ -1,5 +1,5 @@
 import { IncomingWebhook } from '@slack/webhook';
-import { DailyDigest, ArticleResult } from './types';
+import { IntelligenceBrief } from './types';
 
 export class SlackMessenger {
   private webhook: IncomingWebhook;
@@ -8,109 +8,118 @@ export class SlackMessenger {
     this.webhook = new IncomingWebhook(webhookUrl);
   }
 
-  async sendDailyDigest(digest: DailyDigest): Promise<void> {
-    const blocks = this.buildMessageBlocks(digest);
-
-    try {
-      await this.webhook.send({
-        text: `Daily Commerce AI Intelligence - ${digest.date}`,
-        blocks
-      });
-      console.log('Daily digest sent to Slack successfully');
-    } catch (error) {
-      console.error('Failed to send to Slack:', error);
-      throw error;
+  async sendIntelligenceBrief(brief: IntelligenceBrief): Promise<void> {
+    if (brief.article_count === 0) {
+      await this.sendEmptyBrief(brief.date);
+      return;
     }
-  }
 
-  private buildMessageBlocks(digest: DailyDigest): any[] {
-    const blocks: any[] = [];
+    const blocks: any[] = [
+      {
+        type: 'header',
+        text: {
+          type: 'plain_text',
+          text: `:newspaper: AI Commerce Intelligence Brief - ${brief.date}`
+        }
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*${brief.article_count} articles analyzed*`
+        }
+      },
+      {
+        type: 'divider'
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*:bulb: Executive Summary*\n${brief.executive_summary}`
+        }
+      }
+    ];
 
-    // Header
+    // Key Developments
+    if (brief.key_developments.length > 0) {
+      blocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*:star: Key Developments*\n${brief.key_developments.map((dev, idx) => `${idx + 1}. ${dev}`).join('\n')}`
+        }
+      });
+    }
+
+    // Notable Articles
+    if (brief.notable_articles.length > 0) {
+      const articlesText = brief.notable_articles.map(article =>
+        `• <${article.url}|${article.title}>\n  _${article.source}_ - ${article.why_important}`
+      ).join('\n\n');
+
+      blocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*:bookmark_tabs: Notable Articles*\n${articlesText}`
+        }
+      });
+    }
+
+    // Sentiment & Trends
     blocks.push({
-      type: 'header',
+      type: 'section',
+      fields: [
+        {
+          type: 'mrkdwn',
+          text: `*:chart_with_upwards_trend: Sentiment*\n${brief.sentiment_summary}`
+        },
+        {
+          type: 'mrkdwn',
+          text: `*:telescope: Trends*\n${brief.trends}`
+        }
+      ]
+    });
+
+    // What to Watch
+    blocks.push({
+      type: 'section',
       text: {
-        type: 'plain_text',
-        text: `📊 Daily Commerce AI Intelligence - ${digest.date}`
+        type: 'mrkdwn',
+        text: `*:eyes: What to Watch*\n${brief.what_to_watch}`
       }
     });
 
-    blocks.push({ type: 'divider' });
+    await this.webhook.send({
+      blocks,
+      text: `AI Commerce Intelligence Brief - ${brief.date}`
+    });
 
-    // Each topic section
-    for (const [topicName, articles] of Object.entries(digest.topics)) {
-      if (articles.length === 0) continue;
+    console.log('Intelligence brief sent to Slack successfully');
+  }
 
-      const icon = topicName.includes('agentic') ? '🔶' : '🔷';
-
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `${icon} *${topicName.toUpperCase()}* (${articles.length} new article${articles.length > 1 ? 's' : ''})`
-        }
-      });
-
-      for (const result of articles) {
-        const sentimentEmoji = this.getSentimentEmoji(result.analysis.sentiment_score);
-        const sentimentText = this.getSentimentText(result.analysis.sentiment_score);
-
-        blocks.push({
+  private async sendEmptyBrief(date: string): Promise<void> {
+    await this.webhook.send({
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: `:newspaper: AI Commerce Intelligence Brief - ${date}`
+          }
+        },
+        {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*<${result.article.url}|${result.article.title}>*\n` +
-                  `${sentimentEmoji} Sentiment: ${sentimentText} (${result.analysis.sentiment_score.toFixed(2)})\n` +
-                  `_${result.analysis.summary}_\n` +
-                  `*Themes:* ${result.analysis.themes.join(', ')}\n` +
-                  `*Source:* ${result.article.source}`
+            text: ':mailbox_with_no_mail: No new articles found today'
           }
-        });
-      }
-
-      blocks.push({ type: 'divider' });
-    }
-
-    // Stats section
-    if (digest.stats.total > 0) {
-      const avgSentimentEmoji = this.getSentimentEmoji(digest.stats.avgSentiment);
-      const avgSentimentText = this.getSentimentText(digest.stats.avgSentiment);
-
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `📈 *Quick Stats*\n` +
-                `• Total articles processed: ${digest.stats.total}\n` +
-                `• Average sentiment: ${avgSentimentEmoji} ${avgSentimentText} (${digest.stats.avgSentiment.toFixed(2)})`
         }
-      });
-    } else {
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '📭 No new articles found today'
-        }
-      });
-    }
+      ],
+      text: `AI Commerce Intelligence Brief - ${date} (No articles)`
+    });
 
-    return blocks;
-  }
-
-  private getSentimentEmoji(score: number): string {
-    if (score >= 0.5) return '😊';
-    if (score >= 0.2) return '🙂';
-    if (score >= -0.2) return '😐';
-    if (score >= -0.5) return '😟';
-    return '😞';
-  }
-
-  private getSentimentText(score: number): string {
-    if (score >= 0.5) return 'Positive';
-    if (score >= 0.2) return 'Slightly positive';
-    if (score >= -0.2) return 'Neutral';
-    if (score >= -0.5) return 'Slightly negative';
-    return 'Negative';
+    console.log('Empty brief sent to Slack');
   }
 }

@@ -9,36 +9,31 @@ export interface Article {
   fetched_date?: string;
 }
 
-export interface Analysis {
-  id?: number;
-  article_id: number;
-  summary: string;
-  themes: string[];
-  sentiment_score: number;
-  sentiment_reasoning: string;
-  analyzed_date?: string;
-}
-
 export interface ArticleLink {
   url: string;
   title: string;
   topic: string;
 }
 
-export interface DailyDigest {
-  date: string;
-  topics: {
-    [topicName: string]: ArticleResult[];
-  };
-  stats: {
-    total: number;
-    avgSentiment: number;
-  };
+export interface NotableArticle {
+  title: string;
+  url: string;
+  source: string;
+  why_important: string;
 }
 
-export interface ArticleResult {
-  article: Article;
-  analysis: Analysis;
+export interface IntelligenceBrief {
+  id?: number;
+  date: string;
+  executive_summary: string;
+  key_developments: string[];
+  notable_articles: NotableArticle[];
+  sentiment_summary: string;
+  trends: string;
+  what_to_watch: string;
+  article_count: number;
+  raw_ai_response?: string;
+  created_date?: string;
 }
 
 export interface Config {

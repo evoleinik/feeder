@@ -3,10 +3,10 @@ import * as cron from 'node-cron';
 import { EmailFetcher } from './email';
 import { EmailParser } from './parser';
 import { ArticleScraper } from './scraper';
-import { ArticleAnalyzer } from './analyzer';
+import { IntelligenceAnalyzer } from './analyzer';
 import { SlackMessenger } from './slack';
 import DatabaseManager from './database';
-import { Config, DailyDigest, ArticleResult, ArticleLink, Analysis } from './types';
+import { Config, ArticleLink } from './types';
 import { createAIProvider, ProviderType } from './providers/factory';
 
 dotenv.config();
@@ -17,7 +17,7 @@ class GoogleAlertsIntelligence {
   private emailFetcher: EmailFetcher;
   private parser: EmailParser;
   private scraper: ArticleScraper;
-  private analyzer: ArticleAnalyzer;
+  private analyzer: IntelligenceAnalyzer;
   private slack: SlackMessenger;
 
   constructor() {
@@ -32,7 +32,7 @@ class GoogleAlertsIntelligence {
       type: this.config.ai.provider,
       apiKey: this.getApiKeyForProvider(this.config.ai.provider)
     });
-    this.analyzer = new ArticleAnalyzer(provider);
+    this.analyzer = new IntelligenceAnalyzer(provider);
 
     this.slack = new SlackMessenger(this.config.slack.webhookUrl);
   }
@@ -112,16 +112,12 @@ class GoogleAlertsIntelligence {
     console.log(`\n=== Starting Google Alerts Intelligence Run - ${new Date().toISOString()} ===\n`);
 
     try {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
       // Step 1: Fetch emails
       console.log('Fetching Google Alerts emails...');
       const emails = await this.emailFetcher.fetchGoogleAlerts();
       console.log(`Found ${emails.length} new email(s)`);
-
-      if (emails.length === 0) {
-        console.log('No new emails, sending empty digest');
-        await this.sendEmptyDigest();
-        return;
-      }
 
       // Step 2: Parse emails for article links
       console.log('\nParsing emails for article links...');
@@ -136,104 +132,53 @@ class GoogleAlertsIntelligence {
       const newLinks = allLinks.filter(link => !this.db.articleExists(link.url));
       console.log(`\nNew articles to process: ${newLinks.length} (${allLinks.length - newLinks.length} already in database)`);
 
-      if (newLinks.length === 0) {
-        console.log('No new articles, sending empty digest');
-        await this.sendEmptyDigest();
-        return;
+      // Step 4: Scrape new articles (if any)
+      let newArticles = [];
+      if (newLinks.length > 0) {
+        console.log('\nScraping articles...');
+        const articles = await this.scraper.scrapeMultiple(newLinks);
+        console.log(`Successfully scraped ${articles.length} articles`);
+
+        // Deduplicate articles by URL
+        const uniqueArticles = articles.filter((article, index, self) =>
+          index === self.findIndex(a => a.url === article.url)
+        );
+        const duplicateCount = articles.length - uniqueArticles.length;
+        if (duplicateCount > 0) {
+          console.log(`Removed ${duplicateCount} duplicate article(s)`);
+        }
+
+        // Store articles
+        console.log('\nStoring articles in database...');
+        for (const article of uniqueArticles) {
+          const articleId = this.db.insertArticle(article);
+          article.id = articleId;
+        }
+
+        newArticles = uniqueArticles;
       }
 
-      // Step 4: Scrape articles
-      console.log('\nScraping articles...');
-      const articles = await this.scraper.scrapeMultiple(newLinks);
-      console.log(`Successfully scraped ${articles.length} articles`);
+      // Step 5: Get all articles from today for analysis
+      console.log('\nGathering today\'s articles...');
+      const todayArticles = this.db.getRecentArticles(1);
+      console.log(`Found ${todayArticles.length} article(s) from today`);
 
-      if (articles.length === 0) {
-        console.log('No articles scraped successfully, skipping');
-        return;
-      }
+      // Step 6: Create intelligence brief
+      console.log('\nCreating intelligence brief...');
+      const brief = await this.analyzer.createBrief(todayArticles, today);
 
-      // Step 5: Store all articles first
-      console.log('\nStoring articles in database...');
-      for (const article of articles) {
-        const articleId = this.db.insertArticle(article);
-        article.id = articleId;
-      }
+      // Store brief in database
+      this.db.insertDailyBrief(brief);
 
-      // Step 6: Get all unanalyzed articles (new + old that failed before)
-      console.log('Finding articles needing analysis...');
-      const unanalyzedArticles = this.db.getArticlesWithoutAnalysis();
-      console.log(`Found ${unanalyzedArticles.length} articles to analyze (${articles.length} new, ${unanalyzedArticles.length - articles.length} retries)`);
-
-      // Step 7: Analyze all unanalyzed articles
-      console.log('\nAnalyzing articles...');
-      const results: ArticleResult[] = [];
-
-      for (const article of unanalyzedArticles) {
-        // Analyze
-        const analysisData = await this.analyzer.analyzeArticle(article);
-        analysisData.article_id = article.id!;
-
-        // Store analysis
-        const analysisId = this.db.insertAnalysis(analysisData);
-
-        // Create full Analysis object with id
-        const analysis: Analysis = {
-          ...analysisData,
-          id: analysisId
-        };
-
-        results.push({ article, analysis });
-      }
-
-      // Step 8: Build and send digest
-      console.log('\nSending digest to Slack...');
-      const digest = this.buildDigest(results);
-      await this.slack.sendDailyDigest(digest);
+      // Step 7: Send to Slack
+      console.log('\nSending brief to Slack...');
+      await this.slack.sendIntelligenceBrief(brief);
 
       console.log(`\n=== Run completed successfully ===\n`);
     } catch (error) {
       console.error('Error during run:', error);
       throw error;
     }
-  }
-
-  private buildDigest(results: ArticleResult[]): DailyDigest {
-    const topics: { [key: string]: ArticleResult[] } = {};
-
-    // Group by topic
-    for (const result of results) {
-      const topic = result.article.topic;
-      if (!topics[topic]) {
-        topics[topic] = [];
-      }
-      topics[topic].push(result);
-    }
-
-    // Calculate average sentiment
-    const avgSentiment = results.length > 0
-      ? results.reduce((sum, r) => sum + r.analysis.sentiment_score, 0) / results.length
-      : 0;
-
-    return {
-      date: new Date().toLocaleDateString(),
-      topics,
-      stats: {
-        total: results.length,
-        avgSentiment
-      }
-    };
-  }
-
-  private async sendEmptyDigest(): Promise<void> {
-    const digest: DailyDigest = {
-      date: new Date().toLocaleDateString(),
-      topics: {},
-      stats: {
-        total: 0,
-        avgSentiment: 0
-      }
-    };
-    await this.slack.sendDailyDigest(digest);
   }
 
   start(): void {

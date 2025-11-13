@@ -1,1 +1,2 @@
 - keep it simple, stupid. don't repeat yourself. you ain't gonna need it.
+- try not to delete the database and re-use the scraped article data

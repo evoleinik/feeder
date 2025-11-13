@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import { Article, Analysis } from './types';
+import { Article } from './types';
 
 const DB_PATH = path.join(__dirname, '../db/alerts.db');
 
@@ -25,20 +25,24 @@ class DatabaseManager {
         fetched_date TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS analysis (
+      CREATE TABLE IF NOT EXISTS daily_briefs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        article_id INTEGER NOT NULL,
-        summary TEXT,
-        themes TEXT,
-        sentiment_score REAL,
-        sentiment_reasoning TEXT,
-        analyzed_date TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (article_id) REFERENCES articles(id)
+        date TEXT UNIQUE NOT NULL,
+        executive_summary TEXT,
+        key_developments TEXT,
+        notable_articles TEXT,
+        sentiment_summary TEXT,
+        trends TEXT,
+        what_to_watch TEXT,
+        article_count INTEGER,
+        raw_ai_response TEXT,
+        created_date TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE INDEX IF NOT EXISTS idx_articles_url ON articles(url);
       CREATE INDEX IF NOT EXISTS idx_articles_topic ON articles(topic);
-      CREATE INDEX IF NOT EXISTS idx_analysis_article ON analysis(article_id);
+      CREATE INDEX IF NOT EXISTS idx_articles_date ON articles(fetched_date);
+      CREATE INDEX IF NOT EXISTS idx_briefs_date ON daily_briefs(date);
     `);
   }
 
@@ -65,90 +69,68 @@ class DatabaseManager {
     return result.lastInsertRowid as number;
   }
 
-  insertAnalysis(analysis: Analysis): number {
+  insertDailyBrief(brief: any): number {
     const stmt = this.db.prepare(`
-      INSERT INTO analysis (article_id, summary, themes, sentiment_score, sentiment_reasoning)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO daily_briefs (
+        date,
+        executive_summary,
+        key_developments,
+        notable_articles,
+        sentiment_summary,
+        trends,
+        what_to_watch,
+        article_count,
+        raw_ai_response
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
-      analysis.article_id,
-      analysis.summary,
-      JSON.stringify(analysis.themes),
-      analysis.sentiment_score,
-      analysis.sentiment_reasoning
+      brief.date,
+      brief.executive_summary,
+      JSON.stringify(brief.key_developments),
+      JSON.stringify(brief.notable_articles),
+      brief.sentiment_summary,
+      brief.trends,
+      brief.what_to_watch,
+      brief.article_count,
+      brief.raw_ai_response || null
     );
 
     return result.lastInsertRowid as number;
   }
 
-  getArticleWithAnalysis(articleId: number): { article: Article; analysis: Analysis } | null {
-    const articleStmt = this.db.prepare('SELECT * FROM articles WHERE id = ?');
-    const analysisStmt = this.db.prepare('SELECT * FROM analysis WHERE article_id = ?');
+  getBriefForDate(date: string): any | null {
+    const stmt = this.db.prepare('SELECT * FROM daily_briefs WHERE date = ?');
+    const row = stmt.get(date) as any;
 
-    const article = articleStmt.get(articleId) as Article | undefined;
-    const analysisRow = analysisStmt.get(articleId) as any;
+    if (!row) return null;
 
-    if (!article || !analysisRow) return null;
-
-    const analysis: Analysis = {
-      ...analysisRow,
-      themes: JSON.parse(analysisRow.themes)
+    return {
+      ...row,
+      key_developments: JSON.parse(row.key_developments),
+      notable_articles: JSON.parse(row.notable_articles)
     };
-
-    return { article, analysis };
   }
 
-  getArticlesWithoutAnalysis(): Article[] {
+  getArticlesForDate(date: string): Article[] {
     const stmt = this.db.prepare(`
-      SELECT a.*
-      FROM articles a
-      LEFT JOIN analysis an ON a.id = an.article_id
-      WHERE an.id IS NULL
+      SELECT * FROM articles
+      WHERE DATE(fetched_date) = ?
+      ORDER BY fetched_date DESC
     `);
 
-    return stmt.all() as Article[];
+    return stmt.all(date) as Article[];
   }
 
-  getRecentArticles(days: number = 7): Array<{ article: Article; analysis: Analysis }> {
+  getRecentArticles(days: number = 1): Article[] {
     const stmt = this.db.prepare(`
-      SELECT
-        a.*,
-        an.id as analysis_id,
-        an.summary,
-        an.themes,
-        an.sentiment_score,
-        an.sentiment_reasoning,
-        an.analyzed_date
-      FROM articles a
-      JOIN analysis an ON a.id = an.article_id
-      WHERE datetime(a.fetched_date) >= datetime('now', '-' || ? || ' days')
-      ORDER BY a.fetched_date DESC
+      SELECT * FROM articles
+      WHERE datetime(fetched_date) >= datetime('now', '-' || ? || ' days')
+      ORDER BY fetched_date DESC
     `);
 
-    const rows = stmt.all(days) as any[];
-
-    return rows.map(row => ({
-      article: {
-        id: row.id,
-        url: row.url,
-        title: row.title,
-        source: row.source,
-        topic: row.topic,
-        content: row.content,
-        published_date: row.published_date,
-        fetched_date: row.fetched_date
-      },
-      analysis: {
-        id: row.analysis_id,
-        article_id: row.id,
-        summary: row.summary,
-        themes: JSON.parse(row.themes),
-        sentiment_score: row.sentiment_score,
-        sentiment_reasoning: row.sentiment_reasoning,
-        analyzed_date: row.analyzed_date
-      }
-    }));
+    return stmt.all(days) as Article[];
   }
 
   close() {

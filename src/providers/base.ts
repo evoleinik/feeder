@@ -1,4 +1,4 @@
-import { Article, Analysis } from '../types';
+import { Article } from '../types';
 
 export interface AnalysisResult {
   summary: string;
