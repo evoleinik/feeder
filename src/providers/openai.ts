@@ -36,7 +36,7 @@ Sentiment scale:
 Respond with valid JSON only, no other text.`;
 
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4-turbo',
+      model: 'gpt-4o',
       messages: [{
         role: 'user',
         content: prompt
