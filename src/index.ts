@@ -152,18 +152,26 @@ class GoogleAlertsIntelligence {
         return;
       }
 
-      // Step 5: Store articles and analyze
-      console.log('\nStoring and analyzing articles...');
-      const results: ArticleResult[] = [];
-
+      // Step 5: Store all articles first
+      console.log('\nStoring articles in database...');
       for (const article of articles) {
-        // Store article
         const articleId = this.db.insertArticle(article);
         article.id = articleId;
+      }
 
+      // Step 6: Get all unanalyzed articles (new + old that failed before)
+      console.log('Finding articles needing analysis...');
+      const unanalyzedArticles = this.db.getArticlesWithoutAnalysis();
+      console.log(`Found ${unanalyzedArticles.length} articles to analyze (${articles.length} new, ${unanalyzedArticles.length - articles.length} retries)`);
+
+      // Step 7: Analyze all unanalyzed articles
+      console.log('\nAnalyzing articles...');
+      const results: ArticleResult[] = [];
+
+      for (const article of unanalyzedArticles) {
         // Analyze
         const analysisData = await this.analyzer.analyzeArticle(article);
-        analysisData.article_id = articleId;
+        analysisData.article_id = article.id!;
 
         // Store analysis
         const analysisId = this.db.insertAnalysis(analysisData);
@@ -177,7 +185,7 @@ class GoogleAlertsIntelligence {
         results.push({ article, analysis });
       }
 
-      // Step 6: Build and send digest
+      // Step 8: Build and send digest
       console.log('\nSending digest to Slack...');
       const digest = this.buildDigest(results);
       await this.slack.sendDailyDigest(digest);

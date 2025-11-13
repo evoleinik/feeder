@@ -99,6 +99,17 @@ class DatabaseManager {
     return { article, analysis };
   }
 
+  getArticlesWithoutAnalysis(): Article[] {
+    const stmt = this.db.prepare(`
+      SELECT a.*
+      FROM articles a
+      LEFT JOIN analysis an ON a.id = an.article_id
+      WHERE an.id IS NULL
+    `);
+
+    return stmt.all() as Article[];
+  }
+
   getRecentArticles(days: number = 7): Array<{ article: Article; analysis: Analysis }> {
     const stmt = this.db.prepare(`
       SELECT
