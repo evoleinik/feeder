@@ -1,6 +1,6 @@
 # Google Alerts Intelligence Tool
 
-Automatically processes Google Alerts emails for "ai commerce" and "agentic commerce", analyzes articles with AI, tracks sentiment/trends over time, and delivers daily insights to Slack.
+Automatically processes Google Alerts emails, analyzes articles with AI, and delivers daily intelligence briefs to Slack. Fully configurable for any topic or industry you want to monitor.
 
 ## Features
 
@@ -83,7 +83,15 @@ GEMINI_API_KEY=xxxxx
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 CRON_SCHEDULE=1 11 * * *
+
+# Intelligence Brief Configuration (optional)
+BRIEF_DOMAIN="your monitored topics"
+BRIEF_TITLE="Intelligence Brief"
 ```
+
+**Optional Configuration:**
+- `BRIEF_DOMAIN`: The topic/industry you're monitoring (e.g., "AI commerce", "cybersecurity news", "climate tech"). Used in AI analysis prompts. Defaults to "your monitored topics".
+- `BRIEF_TITLE`: The title shown in Slack notifications (e.g., "Tech News Brief", "Security Intelligence"). Defaults to "Intelligence Brief".
 
 ## Usage
 

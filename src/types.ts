@@ -58,4 +58,8 @@ export interface Config {
   cron: {
     schedule: string;
   };
+  brief: {
+    domain: string;
+    title: string;
+  };
 }

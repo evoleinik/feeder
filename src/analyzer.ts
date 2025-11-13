@@ -22,9 +22,11 @@ function extractJSON(text: string): string {
 export class IntelligenceAnalyzer {
   private provider: AIProvider;
   private aiProviderType: string;
+  private domain: string;
 
-  constructor(provider: AIProvider) {
+  constructor(provider: AIProvider, domain: string) {
     this.provider = provider;
+    this.domain = domain;
     this.aiProviderType = process.env.AI_PROVIDER?.toLowerCase() || 'openai';
     console.log(`Using AI provider: ${provider.getName()}`);
   }
@@ -49,7 +51,7 @@ export class IntelligenceAnalyzer {
         `[${idx + 1}] ${article.title}\nSource: ${article.source}\nTopic: ${article.topic}\nContent preview: ${article.content.slice(0, 500)}...\n`
       ).join('\n');
 
-      const prompt = `You are an intelligence analyst covering AI commerce and agentic commerce. Analyze today's articles and create a daily intelligence brief.
+      const prompt = `You are an intelligence analyst covering ${this.domain}. Analyze today's articles and create a daily intelligence brief.
 
 Articles (${articles.length} total):
 ${articleSummaries}
@@ -95,17 +97,17 @@ RESPOND WITH ONLY THE JSON OBJECT. NO MARKDOWN CODE BLOCKS. NO EXPLANATIONS. JUS
       // Fallback brief
       return {
         date,
-        executive_summary: `Analyzed ${articles.length} articles on AI commerce and agentic commerce today. See individual articles for details.`,
+        executive_summary: `Analyzed ${articles.length} articles on ${this.domain} today. See individual articles for details.`,
         key_developments: articles.slice(0, 5).map(a => `${a.title} (${a.source})`),
         notable_articles: articles.slice(0, 3).map(a => ({
           title: a.title,
           url: a.url,
           source: a.source,
-          why_important: 'Relevant to AI commerce developments'
+          why_important: 'Relevant to today\'s developments'
         })),
         sentiment_summary: 'Neutral - Unable to perform detailed analysis',
-        trends: 'Multiple articles discussing AI commerce implementation across various sectors.',
-        what_to_watch: 'Monitor for emerging patterns in AI commerce adoption.',
+        trends: `Multiple articles discussing ${this.domain} across various sectors.`,
+        what_to_watch: `Monitor for emerging patterns in ${this.domain}.`,
         article_count: articles.length
       };
     }

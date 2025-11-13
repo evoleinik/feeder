@@ -3,9 +3,11 @@ import { IntelligenceBrief } from './types';
 
 export class SlackMessenger {
   private webhook: IncomingWebhook;
+  private briefTitle: string;
 
-  constructor(webhookUrl: string) {
+  constructor(webhookUrl: string, briefTitle: string) {
     this.webhook = new IncomingWebhook(webhookUrl);
+    this.briefTitle = briefTitle;
   }
 
   async sendIntelligenceBrief(brief: IntelligenceBrief): Promise<void> {
@@ -19,7 +21,7 @@ export class SlackMessenger {
         type: 'header',
         text: {
           type: 'plain_text',
-          text: `:newspaper: AI Commerce Intelligence Brief - ${brief.date}`
+          text: `:newspaper: ${this.briefTitle} - ${brief.date}`
         }
       },
       {
@@ -93,7 +95,7 @@ export class SlackMessenger {
 
     await this.webhook.send({
       blocks,
-      text: `AI Commerce Intelligence Brief - ${brief.date}`
+      text: `${this.briefTitle} - ${brief.date}`
     });
 
     console.log('Intelligence brief sent to Slack successfully');
@@ -106,7 +108,7 @@ export class SlackMessenger {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: `:newspaper: AI Commerce Intelligence Brief - ${date}`
+            text: `:newspaper: ${this.briefTitle} - ${date}`
           }
         },
         {
@@ -117,7 +119,7 @@ export class SlackMessenger {
           }
         }
       ],
-      text: `AI Commerce Intelligence Brief - ${date} (No articles)`
+      text: `${this.briefTitle} - ${date} (No articles)`
     });
 
     console.log('Empty brief sent to Slack');

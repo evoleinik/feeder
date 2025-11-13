@@ -32,9 +32,9 @@ class GoogleAlertsIntelligence {
       type: this.config.ai.provider,
       apiKey: this.getApiKeyForProvider(this.config.ai.provider)
     });
-    this.analyzer = new IntelligenceAnalyzer(provider);
+    this.analyzer = new IntelligenceAnalyzer(provider, this.config.brief.domain);
 
-    this.slack = new SlackMessenger(this.config.slack.webhookUrl);
+    this.slack = new SlackMessenger(this.config.slack.webhookUrl, this.config.brief.title);
   }
 
   private getApiKeyForProvider(providerType: ProviderType): string {
@@ -104,6 +104,10 @@ class GoogleAlertsIntelligence {
       },
       cron: {
         schedule: process.env.CRON_SCHEDULE || '1 11 * * *' // 11:01 AM daily
+      },
+      brief: {
+        domain: process.env.BRIEF_DOMAIN || 'your monitored topics',
+        title: process.env.BRIEF_TITLE || 'Intelligence Brief'
       }
     };
   }
