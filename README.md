@@ -355,8 +355,14 @@ sudo timedatectl set-timezone UTC
 ### Troubleshooting
 
 **Puppeteer issues:**
+
+On ARM64/aarch64 systems, Puppeteer's bundled Chrome won't work. Add this to your `.env` file:
+```env
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+```
+
+Or export it as an environment variable:
 ```bash
-# Set explicit Chrome path in environment
 export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ```
 
