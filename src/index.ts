@@ -88,7 +88,8 @@ class GoogleAlertsIntelligence {
         host: process.env.IMAP_HOST!,
         port: parseInt(process.env.IMAP_PORT!),
         user: process.env.IMAP_USER!,
-        password: process.env.IMAP_PASSWORD!
+        password: process.env.IMAP_PASSWORD!,
+        maxPerRun: parseInt(process.env.MAX_EMAILS_PER_RUN || '2')
       },
       ai: {
         provider: aiProvider,

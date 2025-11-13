@@ -47,6 +47,7 @@ export interface Config {
     port: number;
     user: string;
     password: string;
+    maxPerRun: number;
   };
   ai: {
     provider: 'claude' | 'openai' | 'gemini';

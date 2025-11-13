@@ -36,20 +36,27 @@ export class EmailFetcher {
             return reject(err);
           }
 
-          // Search for unread emails from Google Alerts
-          imap.search(['UNSEEN', ['FROM', 'googlealerts-noreply@google.com']], (err, results) => {
+          // Search for emails from Google Alerts in last 24 hours
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+
+          imap.search([['FROM', 'googlealerts-noreply@google.com'], ['SINCE', yesterday]], (err, results) => {
             if (err) {
               imap.end();
               return reject(err);
             }
 
             if (!results || results.length === 0) {
-              console.log('No new Google Alerts emails found');
+              console.log('No Google Alerts emails found in last 24 hours');
               imap.end();
               return resolve([]);
             }
 
-            const fetch = imap.fetch(results, { bodies: '' });
+            // Limit to most recent N emails
+            const limitedResults = results.slice(-this.config.maxPerRun);
+            console.log(`Found ${results.length} email(s), processing most recent ${limitedResults.length}`);
+
+            const fetch = imap.fetch(limitedResults, { bodies: '' });
 
             fetch.on('message', (msg) => {
               msg.on('body', (stream: any) => {
