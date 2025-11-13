@@ -1,0 +1,1 @@
+- keep it simple, stupid. don't repeat yourself. you ain't gonna need it.
