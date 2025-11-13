@@ -7,6 +7,7 @@ import { ArticleAnalyzer } from './analyzer';
 import { SlackMessenger } from './slack';
 import DatabaseManager from './database';
 import { Config, DailyDigest, ArticleResult, ArticleLink } from './types';
+import { createAIProvider, ProviderType } from './providers/factory';
 
 dotenv.config();
 
@@ -25,8 +26,28 @@ class GoogleAlertsIntelligence {
     this.emailFetcher = new EmailFetcher(this.config.imap);
     this.parser = new EmailParser();
     this.scraper = new ArticleScraper();
-    this.analyzer = new ArticleAnalyzer(this.config.anthropic.apiKey);
+
+    // Create AI provider based on configuration
+    const provider = createAIProvider({
+      type: this.config.ai.provider,
+      apiKey: this.getApiKeyForProvider(this.config.ai.provider)
+    });
+    this.analyzer = new ArticleAnalyzer(provider);
+
     this.slack = new SlackMessenger(this.config.slack.webhookUrl);
+  }
+
+  private getApiKeyForProvider(providerType: ProviderType): string {
+    switch (providerType) {
+      case 'claude':
+        return this.config.ai.apiKeys.anthropic!;
+      case 'openai':
+        return this.config.ai.apiKeys.openai!;
+      case 'gemini':
+        return this.config.ai.apiKeys.gemini!;
+      default:
+        throw new Error(`Unknown provider type: ${providerType}`);
+    }
   }
 
   private loadConfig(): Config {
@@ -35,14 +56,31 @@ class GoogleAlertsIntelligence {
       'IMAP_PORT',
       'IMAP_USER',
       'IMAP_PASSWORD',
-      'ANTHROPIC_API_KEY',
-      'SLACK_WEBHOOK_URL'
+      'SLACK_WEBHOOK_URL',
+      'AI_PROVIDER'
     ];
 
     for (const key of required) {
       if (!process.env[key]) {
         throw new Error(`Missing required environment variable: ${key}`);
       }
+    }
+
+    const aiProvider = process.env.AI_PROVIDER?.toLowerCase() as ProviderType;
+    if (!['claude', 'openai', 'gemini'].includes(aiProvider)) {
+      throw new Error(`Invalid AI_PROVIDER: ${aiProvider}. Must be 'claude', 'openai', or 'gemini'`);
+    }
+
+    // Validate the required API key for the selected provider
+    const providerKeyMap = {
+      claude: 'ANTHROPIC_API_KEY',
+      openai: 'OPENAI_API_KEY',
+      gemini: 'GEMINI_API_KEY'
+    };
+
+    const requiredKey = providerKeyMap[aiProvider];
+    if (!process.env[requiredKey]) {
+      throw new Error(`Missing required API key for ${aiProvider}: ${requiredKey}`);
     }
 
     return {
@@ -52,8 +90,13 @@ class GoogleAlertsIntelligence {
         user: process.env.IMAP_USER!,
         password: process.env.IMAP_PASSWORD!
       },
-      anthropic: {
-        apiKey: process.env.ANTHROPIC_API_KEY!
+      ai: {
+        provider: aiProvider,
+        apiKeys: {
+          anthropic: process.env.ANTHROPIC_API_KEY,
+          openai: process.env.OPENAI_API_KEY,
+          gemini: process.env.GEMINI_API_KEY
+        }
       },
       slack: {
         webhookUrl: process.env.SLACK_WEBHOOK_URL!

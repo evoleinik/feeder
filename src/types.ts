@@ -48,8 +48,13 @@ export interface Config {
     user: string;
     password: string;
   };
-  anthropic: {
-    apiKey: string;
+  ai: {
+    provider: 'claude' | 'openai' | 'gemini';
+    apiKeys: {
+      anthropic?: string;
+      openai?: string;
+      gemini?: string;
+    };
   };
   slack: {
     webhookUrl: string;

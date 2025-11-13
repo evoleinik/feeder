@@ -6,11 +6,12 @@ Automatically processes Google Alerts emails for "ai commerce" and "agentic comm
 
 - 📧 Fetches Google Alerts emails via IMAP
 - 🔍 Extracts and scrapes article content
-- 🤖 AI-powered analysis (summary, themes, sentiment)
+- 🤖 AI-powered analysis with multiple providers (Claude, OpenAI, Gemini)
 - 💾 SQLite database for historical tracking
 - 📊 Daily Slack digests with sentiment analysis
 - ⏰ Automated daily runs at 11:01 AM
 - 🔄 Deduplication (skips already-processed articles)
+- 🔌 Pluggable AI providers - easily switch between models
 
 ## Setup
 
@@ -29,11 +30,23 @@ Create a Gmail App Password:
 4. Generate password for "Mail"
 5. Copy the 16-character password
 
-### 3. Get Anthropic API Key
+### 3. Choose and Configure AI Provider
 
+The tool supports three AI providers. Choose one and get its API key:
+
+**Option A: OpenAI (GPT-4)**
+1. Sign up at https://platform.openai.com
+2. Create an API key
+3. Copy the key (starts with `sk-proj-`)
+
+**Option B: Anthropic (Claude)**
 1. Sign up at https://console.anthropic.com
 2. Create an API key
 3. Copy the key (starts with `sk-ant-`)
+
+**Option C: Google (Gemini)**
+1. Get API key at https://makersuite.google.com/app/apikey
+2. Copy the key
 
 ### 4. Configure Slack Webhook
 
@@ -59,7 +72,13 @@ IMAP_PORT=993
 IMAP_USER=your-email@gmail.com
 IMAP_PASSWORD=your-16-char-app-password
 
+# Choose one: claude, openai, or gemini
+AI_PROVIDER=openai
+
+# Only the API key for your chosen provider is required
 ANTHROPIC_API_KEY=sk-ant-xxxxx
+OPENAI_API_KEY=sk-proj-xxxxx
+GEMINI_API_KEY=xxxxx
 
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
@@ -98,21 +117,44 @@ Run in development mode with ts-node:
 npm run dev
 ```
 
+## Switching AI Providers
+
+To switch between AI providers, simply change the `AI_PROVIDER` value in your `.env` file:
+
+```bash
+# Use OpenAI (GPT-4)
+AI_PROVIDER=openai
+
+# Or use Claude
+AI_PROVIDER=claude
+
+# Or use Gemini
+AI_PROVIDER=gemini
+```
+
+The tool will automatically use the correct API key and model. No code changes needed!
+
 ## Architecture
 
 ```
 src/
-├── index.ts       # Main orchestrator + scheduler
-├── email.ts       # IMAP email fetching
-├── parser.ts      # Extract article links from HTML
-├── scraper.ts     # Puppeteer article scraping
-├── analyzer.ts    # Claude API analysis
-├── slack.ts       # Slack message formatting
-├── database.ts    # SQLite operations
-└── types.ts       # TypeScript interfaces
+├── index.ts          # Main orchestrator + scheduler
+├── email.ts          # IMAP email fetching
+├── parser.ts         # Extract article links from HTML
+├── scraper.ts        # Puppeteer article scraping
+├── analyzer.ts       # AI analysis orchestrator
+├── providers/
+│   ├── base.ts       # AI provider interface
+│   ├── claude.ts     # Claude implementation
+│   ├── openai.ts     # OpenAI implementation
+│   ├── gemini.ts     # Gemini implementation
+│   └── factory.ts    # Provider factory
+├── slack.ts          # Slack message formatting
+├── database.ts       # SQLite operations
+└── types.ts          # TypeScript interfaces
 
 db/
-└── alerts.db      # SQLite database (auto-created)
+└── alerts.db         # SQLite database (auto-created)
 ```
 
 ## Database Schema

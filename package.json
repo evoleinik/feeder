@@ -19,6 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
+    "@google/generative-ai": "^0.21.0",
     "@slack/webhook": "^7.0.2",
     "better-sqlite3": "^11.0.0",
     "cheerio": "^1.0.0",
@@ -26,6 +27,7 @@
     "imap": "^0.8.17",
     "mailparser": "^3.7.1",
     "node-cron": "^3.0.3",
+    "openai": "^4.75.0",
     "puppeteer": "^22.0.0"
   },
   "devDependencies": {
