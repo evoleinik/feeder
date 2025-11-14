@@ -48,7 +48,7 @@ export class IntelligenceAnalyzer {
     try {
       // Prepare article summaries for AI
       const articleSummaries = articles.map((article, idx) =>
-        `[${idx + 1}] ${article.title}\nSource: ${article.source}\nTopic: ${article.topic}\nContent preview: ${article.content.slice(0, 500)}...\n`
+        `[${idx + 1}] ${article.title}\nURL: ${article.url}\nSource: ${article.source}\nTopic: ${article.topic}\nContent preview: ${article.content.slice(0, 500)}...\n`
       ).join('\n');
 
       const prompt = `You are an intelligence analyst covering ${this.domain}. Analyze today's articles and create a daily intelligence brief.
@@ -63,7 +63,7 @@ Create a JSON response with:
   "notable_articles": [
     {
       "title": "article title",
-      "url": "full url",
+      "url": "COMPLETE URL including https:// protocol",
       "source": "source domain",
       "why_important": "one sentence explaining why this matters"
     }
@@ -72,6 +72,9 @@ Create a JSON response with:
   "trends": "What patterns do you see? Are we in early hype or practical implementation? 2-3 sentences.",
   "what_to_watch": "What questions are emerging? What might happen next? 2-3 sentences."
 }
+
+IMPORTANT: For notable_articles, you MUST include the FULL URL exactly as provided above (starting with https://).
+Example: "url": "https://example.com/article/full-path" NOT "url": "example.com"
 
 Focus on intelligence, not just summaries. What actually matters? What's changing?
 
@@ -146,16 +149,45 @@ RESPOND WITH ONLY THE JSON OBJECT. NO MARKDOWN CODE BLOCKS. NO EXPLANATIONS. JUS
       // Ensure notable_articles has full URLs
       if (parsed.notable_articles) {
         parsed.notable_articles = parsed.notable_articles.map((article: any) => {
-          // Try to find the full URL from our articles if only title is provided
-          if (!article.url || article.url === '') {
-            const matchingArticle = articles.find(a =>
-              a.title.toLowerCase().includes(article.title.toLowerCase())
+          // Validate and fix URL
+          const hasValidUrl = article.url && (article.url.startsWith('http://') || article.url.startsWith('https://'));
+
+          if (!hasValidUrl) {
+            // Try to find the full URL from our articles
+            let matchingArticle = null;
+
+            // First, try exact title match
+            matchingArticle = articles.find(a =>
+              a.title.toLowerCase() === article.title.toLowerCase()
             );
+
+            // If not found, try partial title match
+            if (!matchingArticle) {
+              matchingArticle = articles.find(a =>
+                a.title.toLowerCase().includes(article.title.toLowerCase()) ||
+                article.title.toLowerCase().includes(a.title.toLowerCase())
+              );
+            }
+
+            // If still not found and we have a partial URL, try domain matching
+            if (!matchingArticle && article.url) {
+              const domain = article.url.replace('www.', '');
+              matchingArticle = articles.find(a =>
+                a.url.includes(domain) || a.source.includes(domain)
+              );
+            }
+
+            // If found, use the full URL
             if (matchingArticle) {
               article.url = matchingArticle.url;
-              article.source = matchingArticle.source;
+              if (!article.source) {
+                article.source = matchingArticle.source;
+              }
+            } else {
+              console.warn(`Could not find full URL for article: ${article.title}`);
             }
           }
+
           return article;
         });
       }
