@@ -17,6 +17,26 @@ export class EmailFetcher {
   }
 
   async fetchGoogleAlerts(): Promise<EmailMessage[]> {
+    const maxRetries = 3;
+    const retryDelay = 2000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.fetchGoogleAlertsOnce();
+      } catch (error: any) {
+        const isRetryable = error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED';
+        if (isRetryable && attempt < maxRetries) {
+          console.log(`IMAP connection error (attempt ${attempt}/${maxRetries}), retrying in ${retryDelay/1000}s...`);
+          await new Promise(r => setTimeout(r, retryDelay));
+        } else {
+          throw error;
+        }
+      }
+    }
+    return [];
+  }
+
+  private fetchGoogleAlertsOnce(): Promise<EmailMessage[]> {
     return new Promise((resolve, reject) => {
       const imap = new Imap({
         user: this.config.user,
