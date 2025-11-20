@@ -136,11 +136,17 @@ class GoogleAlertsIntelligence {
       const newLinks = allLinks.filter(link => !this.db.articleExists(link.url));
       console.log(`\nNew articles to process: ${newLinks.length} (${allLinks.length - newLinks.length} already in database)`);
 
+      // Parse concurrency from -c flag
+      const concurrencyIdx = process.argv.indexOf('-c');
+      const concurrency = concurrencyIdx !== -1
+        ? parseInt(process.argv[concurrencyIdx + 1]) || 3
+        : 3;
+
       // Step 4: Scrape new articles (if any)
       let newArticles = [];
       if (newLinks.length > 0) {
         console.log('\nScraping articles...');
-        const articles = await this.scraper.scrapeMultiple(newLinks);
+        const articles = await this.scraper.scrapeMultiple(newLinks, concurrency);
         console.log(`Successfully scraped ${articles.length} articles`);
 
         // Deduplicate articles by URL

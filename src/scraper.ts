@@ -102,17 +102,20 @@ export class ArticleScraper {
     }
   }
 
-  async scrapeMultiple(links: ArticleLink[]): Promise<Article[]> {
+  async scrapeMultiple(links: ArticleLink[], concurrency = 3): Promise<Article[]> {
     const articles: Article[] = [];
 
-    for (const link of links) {
-      console.log(`Scraping: ${link.url}`);
-      const article = await this.scrapeArticle(link);
-      if (article) {
-        articles.push(article);
+    for (let i = 0; i < links.length; i += concurrency) {
+      const batch = links.slice(i, i + concurrency);
+      for (const link of batch) {
+        console.log(`Scraping: ${link.url}`);
       }
-      // Small delay to be respectful
-      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const batchResults = await Promise.all(
+        batch.map(link => this.scrapeArticle(link))
+      );
+
+      articles.push(...batchResults.filter((a): a is Article => a !== null));
     }
 
     return articles;
