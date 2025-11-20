@@ -45,26 +45,16 @@ export class SlackMessenger {
 
     // Key Developments
     if (brief.key_developments.length > 0) {
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*:star: Key Developments*\n${brief.key_developments.map((dev, idx) => `${idx + 1}. ${dev}`).join('\n')}`
-        }
-      });
-    }
-
-    // Notable Articles
-    if (brief.notable_articles.length > 0) {
-      const articlesText = brief.notable_articles.map(article =>
-        `• <${article.url}|${article.title}>\n  _${article.source}_ - ${article.why_important}`
-      ).join('\n\n');
+      const developmentsText = brief.key_developments.map((dev, idx) => {
+        const sourcesText = dev.sources.map(s => `<${s.url}|${s.source}>`).join(' • ');
+        return `${idx + 1}. ${dev.development}\n    _Sources: ${sourcesText}_`;
+      }).join('\n\n');
 
       blocks.push({
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*:bookmark_tabs: Notable Articles*\n${articlesText}`
+          text: `*:star: Key Developments*\n${developmentsText}`
         }
       });
     }

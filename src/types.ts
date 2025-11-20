@@ -22,12 +22,16 @@ export interface NotableArticle {
   why_important: string;
 }
 
+export interface KeyDevelopment {
+  development: string;
+  sources: Array<{ title: string; url: string; source: string; }>;
+}
+
 export interface IntelligenceBrief {
   id?: number;
   date: string;
   executive_summary: string;
-  key_developments: string[];
-  notable_articles: NotableArticle[];
+  key_developments: KeyDevelopment[];
   sentiment_summary: string;
   trends: string;
   what_to_watch: string;

@@ -90,7 +90,7 @@ class DatabaseManager {
       brief.date,
       brief.executive_summary,
       JSON.stringify(brief.key_developments),
-      JSON.stringify(brief.notable_articles),
+      null, // notable_articles removed
       brief.sentiment_summary,
       brief.trends,
       brief.what_to_watch,
@@ -109,8 +109,7 @@ class DatabaseManager {
 
     return {
       ...row,
-      key_developments: JSON.parse(row.key_developments),
-      notable_articles: JSON.parse(row.notable_articles)
+      key_developments: JSON.parse(row.key_developments)
     };
   }
 
