@@ -26,7 +26,7 @@ export class ArticleScraper {
 
       // Navigate with timeout
       await page.goto(link.url, {
-        waitUntil: 'networkidle0',
+        waitUntil: 'domcontentloaded',
         timeout: 30000
       });
 
