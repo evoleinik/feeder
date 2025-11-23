@@ -5,6 +5,7 @@ Automatically processes Google Alerts emails, analyzes articles with AI, and del
 ## Features
 
 - 📧 Fetches Google Alerts emails via IMAP
+- 📰 Monitors Hacker News front page for relevant articles (AI-filtered)
 - 🔍 Extracts and scrapes article content
 - 🤖 AI-powered analysis with multiple providers (Claude, OpenAI, Gemini)
 - 💾 SQLite database for historical tracking
@@ -149,6 +150,7 @@ src/
 ├── index.ts          # Main orchestrator + scheduler
 ├── email.ts          # IMAP email fetching
 ├── parser.ts         # Extract article links from HTML
+├── hackernews.ts     # HN front page fetching + AI filtering
 ├── scraper.ts        # Puppeteer article scraping
 ├── analyzer.ts       # Creates intelligence briefs from articles
 ├── providers/

@@ -8,6 +8,7 @@ import { SlackMessenger } from './slack';
 import DatabaseManager from './database';
 import { Config, ArticleLink } from './types';
 import { createAIProvider, ProviderType } from './providers/factory';
+import { HackerNewsFetcher } from './hackernews';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ class GoogleAlertsIntelligence {
   private scraper: ArticleScraper;
   private analyzer: IntelligenceAnalyzer;
   private slack: SlackMessenger;
+  private hnFetcher: HackerNewsFetcher;
 
   constructor() {
     this.config = this.loadConfig();
@@ -35,6 +37,12 @@ class GoogleAlertsIntelligence {
     this.analyzer = new IntelligenceAnalyzer(provider, this.config.brief.domain);
 
     this.slack = new SlackMessenger(this.config.slack.webhookUrl, this.config.brief.title);
+
+    this.hnFetcher = new HackerNewsFetcher(
+      this.config.ai.provider,
+      this.getApiKeyForProvider(this.config.ai.provider),
+      this.config.brief.domain
+    );
   }
 
   private getApiKeyForProvider(providerType: ProviderType): string {
@@ -131,6 +139,11 @@ class GoogleAlertsIntelligence {
         console.log(`  Found ${links.length} links in "${email.subject}"`);
         allLinks.push(...links);
       }
+
+      // Step 2b: Fetch Hacker News articles
+      console.log('\nFetching Hacker News articles...');
+      const hnLinks = await this.hnFetcher.fetchRelevantArticles();
+      allLinks.push(...hnLinks);
 
       // Step 3: Filter out already-processed articles
       const newLinks = allLinks.filter(link => !this.db.articleExists(link.url));
