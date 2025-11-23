@@ -10,6 +10,7 @@ Automatically processes Google Alerts emails, analyzes articles with AI, and del
 - 🤖 AI-powered analysis with multiple providers (Claude, OpenAI, Gemini)
 - 💾 SQLite database for historical tracking
 - 📊 Daily intelligence briefs with consolidated analysis
+- 📈 Historical context awareness (avoids repetition, identifies multi-day trends)
 - ⏰ Automated daily runs at 11:01 AM
 - 🔄 Deduplication (skips already-processed articles)
 - 🔌 Pluggable AI providers - easily switch between models

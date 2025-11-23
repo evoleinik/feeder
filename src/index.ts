@@ -186,9 +186,13 @@ class GoogleAlertsIntelligence {
       const todayArticles = this.db.getRecentArticles(1);
       console.log(`Found ${todayArticles.length} article(s) from today`);
 
+      // Step 5b: Get historical briefs for context
+      const historicalBriefs = this.db.getRecentBriefs(7);
+      console.log(`Found ${historicalBriefs.length} previous brief(s) for context`);
+
       // Step 6: Create intelligence brief
       console.log('\nCreating intelligence brief...');
-      const brief = await this.analyzer.createBrief(todayArticles, today);
+      const brief = await this.analyzer.createBrief(todayArticles, today, historicalBriefs);
 
       // Store brief in database
       this.db.insertDailyBrief(brief);

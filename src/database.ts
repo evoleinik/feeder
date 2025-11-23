@@ -133,6 +133,22 @@ class DatabaseManager {
     return stmt.all(days) as Article[];
   }
 
+  getRecentBriefs(days: number = 7): any[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM daily_briefs
+      WHERE date >= date('now', '-' || ? || ' days')
+      AND date < date('now')
+      ORDER BY date DESC
+    `);
+
+    const rows = stmt.all(days) as any[];
+
+    return rows.map(row => ({
+      ...row,
+      key_developments: row.key_developments ? JSON.parse(row.key_developments) : []
+    }));
+  }
+
   close() {
     this.db.close();
   }

@@ -31,7 +31,7 @@ export class IntelligenceAnalyzer {
     console.log(`Using AI provider: ${provider.getName()}`);
   }
 
-  async createBrief(articles: Article[], date: string): Promise<IntelligenceBrief> {
+  async createBrief(articles: Article[], date: string, historicalBriefs: any[] = []): Promise<IntelligenceBrief> {
     if (articles.length === 0) {
       return {
         date,
@@ -50,7 +50,11 @@ export class IntelligenceAnalyzer {
         `[${idx + 1}] ${article.title}\nURL: ${article.url}\nSource: ${article.source}\nTopic: ${article.topic}\nContent preview: ${article.content.slice(0, 500)}...\n`
       ).join('\n');
 
+      // Build historical context
+      const historicalContext = this.buildHistoricalContext(historicalBriefs);
+
       const prompt = `You are an intelligence analyst covering ${this.domain}. Analyze today's articles and create a daily intelligence brief.
+${historicalContext}
 
 Articles (${articles.length} total):
 ${articleSummaries}
@@ -79,6 +83,11 @@ IMPORTANT:
 - Include 3-5 key developments, consolidating similar stories
 - Each development MUST have at least one source article with FULL URL (starting with https://)
 - Multiple related articles can be grouped under one development
+- DO NOT repeat key developments from previous briefs unless there is significant new information
+- When a story continues from previous coverage, note it (e.g., "Following Monday's announcement...")
+- Identify trends that span multiple days based on historical context
+- Reference previous "what to watch" items if they have materialized
+- Compare today's sentiment to recent trends
 
 Focus on intelligence, not just summaries. What actually matters? What's changing?
 
@@ -205,5 +214,53 @@ RESPOND WITH ONLY THE JSON OBJECT. NO MARKDOWN CODE BLOCKS. NO EXPLANATIONS. JUS
         what_to_watch: 'Monitor for updates'
       };
     }
+  }
+
+  private buildHistoricalContext(briefs: any[]): string {
+    if (!briefs || briefs.length === 0) {
+      return '';
+    }
+
+    const sections: string[] = ['HISTORICAL CONTEXT (previous briefs):'];
+
+    // Previous key developments
+    const developments: string[] = [];
+    for (const brief of briefs.slice(0, 5)) {
+      if (brief.key_developments && brief.key_developments.length > 0) {
+        for (const dev of brief.key_developments) {
+          developments.push(`- [${brief.date}] ${dev.development}`);
+        }
+      }
+    }
+    if (developments.length > 0) {
+      sections.push('\nPrevious key developments:');
+      sections.push(developments.slice(0, 15).join('\n'));
+    }
+
+    // What to watch from previous briefs
+    const watchItems: string[] = [];
+    for (const brief of briefs.slice(0, 3)) {
+      if (brief.what_to_watch) {
+        watchItems.push(`- [${brief.date}] ${brief.what_to_watch}`);
+      }
+    }
+    if (watchItems.length > 0) {
+      sections.push('\nPrevious "what to watch" items:');
+      sections.push(watchItems.join('\n'));
+    }
+
+    // Recent sentiment trend
+    const sentiments: string[] = [];
+    for (const brief of briefs.slice(0, 3)) {
+      if (brief.sentiment_summary) {
+        sentiments.push(`- [${brief.date}] ${brief.sentiment_summary.slice(0, 100)}`);
+      }
+    }
+    if (sentiments.length > 0) {
+      sections.push('\nRecent sentiment:');
+      sections.push(sentiments.join('\n'));
+    }
+
+    return sections.join('\n') + '\n';
   }
 }
