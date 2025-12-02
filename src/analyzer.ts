@@ -45,9 +45,10 @@ export class IntelligenceAnalyzer {
     }
 
     try {
-      // Prepare article summaries for AI
+      // Prepare article summaries for AI (limit content to stay within token limits)
+      const contentLimit = Math.min(1500, Math.floor(8000 / articles.length));
       const articleSummaries = articles.map((article, idx) =>
-        `[${idx + 1}] ${article.title}\nURL: ${article.url}\nSource: ${article.source}\nTopic: ${article.topic}\nContent: ${article.content.slice(0, 2000)}...\n`
+        `[${idx + 1}] ${article.title}\nURL: ${article.url}\nSource: ${article.source}\nTopic: ${article.topic}\nContent: ${article.content.slice(0, contentLimit)}...\n`
       ).join('\n');
 
       // Build historical context
