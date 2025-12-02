@@ -194,12 +194,25 @@ class GoogleAlertsIntelligence {
       console.log('\nCreating intelligence brief...');
       const brief = await this.analyzer.createBrief(todayArticles, today, historicalBriefs);
 
+      // Print brief to console
+      console.log('\n--- Intelligence Brief ---');
+      console.log(`Executive Summary: ${brief.executive_summary}`);
+      for (const dev of brief.key_developments) {
+        console.log(`\n• ${dev.development}`);
+        dev.key_takeaways?.forEach(t => console.log(`  - ${t}`));
+      }
+      console.log('---\n');
+
       // Store brief in database
       this.db.insertDailyBrief(brief);
 
-      // Step 7: Send to Slack
-      console.log('\nSending brief to Slack...');
-      await this.slack.sendIntelligenceBrief(brief);
+      // Step 7: Send to Slack (skip fallback briefs)
+      if (brief.is_fallback) {
+        console.log('\nSkipping Slack (fallback brief due to AI error)');
+      } else {
+        console.log('\nSending brief to Slack...');
+        await this.slack.sendIntelligenceBrief(brief);
+      }
 
       console.log(`\n=== Run completed successfully ===\n`);
     } catch (error) {

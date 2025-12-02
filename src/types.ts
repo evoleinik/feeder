@@ -39,6 +39,7 @@ export interface IntelligenceBrief {
   article_count: number;
   raw_ai_response?: string;
   created_date?: string;
+  is_fallback?: boolean;
 }
 
 export interface Config {

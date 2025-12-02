@@ -68,8 +68,7 @@ Create a JSON response with:
       "development": "Brief description of the key development (1-2 sentences)",
       "key_takeaways": [
         "Main argument, finding, or implication #1",
-        "Main argument, finding, or implication #2",
-        "Main argument, finding, or implication #3"
+        "Main argument, finding, or implication #2"
       ],
       "sources": [
         {
@@ -87,7 +86,7 @@ Create a JSON response with:
 
 IMPORTANT:
 - Include 3-5 key developments, consolidating similar stories
-- Each development MUST include 3-5 key_takeaways - the main ideas, arguments, findings, or implications from the source articles
+- Each development MUST include 2-3 key_takeaways - the main ideas, arguments, findings, or implications from the source articles
 - Each development MUST have at least one source article with FULL URL (starting with https://)
 - Multiple related articles can be grouped under one development
 - DO NOT repeat key developments from previous briefs unless there is significant new information
@@ -128,7 +127,8 @@ RESPOND WITH ONLY THE JSON OBJECT. NO MARKDOWN CODE BLOCKS. NO EXPLANATIONS. JUS
         sentiment_summary: 'Neutral - Unable to perform detailed analysis',
         trends: `Multiple articles discussing ${this.domain} across various sectors.`,
         what_to_watch: `Monitor for emerging patterns in ${this.domain}.`,
-        article_count: articles.length
+        article_count: articles.length,
+        is_fallback: true
       };
     }
   }
