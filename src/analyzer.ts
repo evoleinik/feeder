@@ -54,50 +54,38 @@ export class IntelligenceAnalyzer {
       // Build historical context
       const historicalContext = this.buildHistoricalContext(historicalBriefs);
 
-      const prompt = `You are an intelligence analyst covering ${this.domain}. Analyze today's articles and create a daily intelligence brief.
+      const prompt = `Intelligence analyst for ${this.domain}. Create a TERSE, information-dense daily brief.
 ${historicalContext}
 
-Articles (${articles.length} total):
+Articles (${articles.length}):
 ${articleSummaries}
 
-Create a JSON response with:
+JSON response:
 {
-  "executive_summary": "2-3 sentence summary of what's happening today",
+  "executive_summary": "1-2 sentences. What's the big picture today? No filler.",
   "key_developments": [
     {
-      "development": "Brief description of the key development (1-2 sentences)",
-      "key_takeaways": [
-        "Main argument, finding, or implication #1",
-        "Main argument, finding, or implication #2"
-      ],
-      "sources": [
-        {
-          "title": "article title",
-          "url": "COMPLETE URL including https:// protocol",
-          "source": "source domain"
-        }
-      ]
+      "development": "Headline: WHO did WHAT. Short, telegraphic.",
+      "key_takeaways": ["Unique insight NOT obvious from headline", "Another non-obvious detail"],
+      "sources": [{"title": "...", "url": "FULL https:// URL", "source": "domain"}]
     }
   ],
-  "sentiment_summary": "Overall mood: optimistic/cautious/neutral/hype - with brief reasoning",
-  "trends": "What patterns do you see? Are we in early hype or practical implementation? 2-3 sentences.",
-  "what_to_watch": "What questions are emerging? What might happen next? 2-3 sentences."
+  "sentiment_summary": "One word (optimistic/cautious/neutral/hype) + why in <10 words",
+  "trends": "1 sentence. Hype or real adoption?",
+  "what_to_watch": "1 sentence. What's the next domino?"
 }
 
-IMPORTANT:
-- Include 3-5 key developments, consolidating similar stories
-- Each development MUST include 2-3 key_takeaways - the main ideas, arguments, findings, or implications from the source articles
-- Each development MUST have at least one source article with FULL URL (starting with https://)
-- Multiple related articles can be grouped under one development
-- DO NOT repeat key developments from previous briefs unless there is significant new information
-- When a story continues from previous coverage, note it (e.g., "Following Monday's announcement...")
-- Identify trends that span multiple days based on historical context
-- Reference previous "what to watch" items if they have materialized
-- Compare today's sentiment to recent trends
+RULES:
+- 3-5 developments. CONSOLIDATE same story from multiple sources into ONE development.
+- key_takeaways must ADD information, NOT repeat the headline.
+  BAD: headline "Visa partners with AWS" → takeaway "Partnership aims to enhance commerce" (useless)
+  GOOD: headline "Visa + AWS launch agent toolkit" → takeaway "First payment network with agent-to-agent APIs"
+- No filler: "aims to", "seeks to", "this collaboration", "this partnership"
+- Be specific: numbers, names, what's actually new
+- Skip developments already covered in previous briefs unless major update
+- Each source needs FULL URL starting with https://
 
-Focus on intelligence, not just summaries. What actually matters? What's changing?
-
-RESPOND WITH ONLY THE JSON OBJECT. NO MARKDOWN CODE BLOCKS. NO EXPLANATIONS. JUST THE RAW JSON.`;
+RESPOND WITH ONLY RAW JSON.`;
 
       // Call AI directly (not through provider to avoid prompt wrapping)
       const rawResponse = await this.callAI(prompt);
