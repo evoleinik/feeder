@@ -24,6 +24,7 @@ export interface NotableArticle {
 
 export interface KeyDevelopment {
   development: string;
+  key_takeaways?: string[];
   sources: Array<{ title: string; url: string; source: string; }>;
 }
 

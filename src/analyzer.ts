@@ -47,7 +47,7 @@ export class IntelligenceAnalyzer {
     try {
       // Prepare article summaries for AI
       const articleSummaries = articles.map((article, idx) =>
-        `[${idx + 1}] ${article.title}\nURL: ${article.url}\nSource: ${article.source}\nTopic: ${article.topic}\nContent preview: ${article.content.slice(0, 500)}...\n`
+        `[${idx + 1}] ${article.title}\nURL: ${article.url}\nSource: ${article.source}\nTopic: ${article.topic}\nContent: ${article.content.slice(0, 2000)}...\n`
       ).join('\n');
 
       // Build historical context
@@ -65,6 +65,11 @@ Create a JSON response with:
   "key_developments": [
     {
       "development": "Brief description of the key development (1-2 sentences)",
+      "key_takeaways": [
+        "Main argument, finding, or implication #1",
+        "Main argument, finding, or implication #2",
+        "Main argument, finding, or implication #3"
+      ],
       "sources": [
         {
           "title": "article title",
@@ -81,6 +86,7 @@ Create a JSON response with:
 
 IMPORTANT:
 - Include 3-5 key developments, consolidating similar stories
+- Each development MUST include 3-5 key_takeaways - the main ideas, arguments, findings, or implications from the source articles
 - Each development MUST have at least one source article with FULL URL (starting with https://)
 - Multiple related articles can be grouped under one development
 - DO NOT repeat key developments from previous briefs unless there is significant new information

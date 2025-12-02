@@ -46,8 +46,11 @@ export class SlackMessenger {
     // Key Developments
     if (brief.key_developments.length > 0) {
       const developmentsText = brief.key_developments.map((dev, idx) => {
+        const takeawaysText = dev.key_takeaways?.length
+          ? '\n' + dev.key_takeaways.map(t => `    • ${t}`).join('\n')
+          : '';
         const sourcesText = dev.sources.map(s => `<${s.url}|${s.source}>`).join(' • ');
-        return `${idx + 1}. ${dev.development}\n    _Sources: ${sourcesText}_`;
+        return `${idx + 1}. ${dev.development}${takeawaysText}\n    _Sources: ${sourcesText}_`;
       }).join('\n\n');
 
       blocks.push({
